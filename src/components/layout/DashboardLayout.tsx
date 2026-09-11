@@ -82,7 +82,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <aside className="fixed left-0 top-0 z-40 hidden md:flex h-full w-16 flex-col bg-card/80 backdrop-blur-sm border-r border-border/50">
           {/* Logo */}
           <div className="flex h-16 items-center justify-center px-2">
-            <span className="font-vortex text-xl tracking-tight text-foreground">VHR</span>
+            <Link to="/" aria-label="AI Hire Suite home" className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-soft"><span className="font-vortex text-base tracking-wide pt-0.5">AI</span></Link>
           </div>
 
           {/* New Job Button */}
@@ -162,7 +162,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <SheetContent side="left" className="w-72 p-0">
             <SheetHeader className="p-4 border-b border-border">
               <SheetTitle className="flex items-center gap-2">
-                <span className="font-vortex text-2xl tracking-tight">Vortex HR</span>
+                <span className="font-vortex text-2xl tracking-tight">AI Hire Suite</span>
               </SheetTitle>
             </SheetHeader>
             <nav className="p-4 space-y-2">
