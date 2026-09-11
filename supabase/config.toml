@@ -1,0 +1,13 @@
+project_id = "gokdmkkvmbuklypdkrhm"
+
+[functions.batch-sync-to-personal-db]
+verify_jwt = false
+
+[functions.scheduled-sync]
+verify_jwt = false
+
+[functions.realtime-sync]
+verify_jwt = false
+
+[functions.sync-evaluations]
+verify_jwt = false
