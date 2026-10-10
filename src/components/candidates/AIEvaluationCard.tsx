@@ -17,7 +17,11 @@ import type { Json } from "@/integrations/supabase/types";
 
 interface AIEvaluationCardProps {
   evaluation: {
+    score?: number | null;
     overall_score?: number | null;
+    rubric_scores?: Json | null;
+    raw_response?: Json | null;
+    model_used?: string | null;
     resume_score?: number | null;
     video_score?: number | null;
     recommendation?: string | null;
@@ -143,6 +147,21 @@ export function AIEvaluationCard({ evaluation, className = "" }: AIEvaluationCar
   const weaknesses = parseJsonArray(evaluation.weaknesses);
   const interviewQuestions = parseJsonArray(evaluation.interview_questions);
 
+  // Per-criterion scores (0-5); live evaluations also carry a label and an evidence note in raw_response.
+  const rubricScores = (evaluation.rubric_scores && typeof evaluation.rubric_scores === 'object' && !Array.isArray(evaluation.rubric_scores))
+    ? (evaluation.rubric_scores as Record<string, number>)
+    : {};
+  const rawRubric = (evaluation.raw_response as { rubric?: { key: string; label?: string; evidence?: string }[] } | null)?.rubric ?? [];
+  const rubricRows = Object.entries(rubricScores).map(([key, value]) => {
+    const detail = rawRubric.find((r) => r.key === key);
+    return {
+      key,
+      label: detail?.label || key.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()),
+      value: Number(value),
+      evidence: detail?.evidence,
+    };
+  });
+
   return (
     <Card variant="glass" className={className}>
       <CardHeader className="pb-3">
@@ -155,11 +174,43 @@ export function AIEvaluationCard({ evaluation, className = "" }: AIEvaluationCar
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Overall Score */}
-        {evaluation.overall_score !== null && evaluation.overall_score !== undefined && (
+        {/* Match Score */}
+        {evaluation.score !== null && evaluation.score !== undefined ? (
+          <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/30">
+            <span className="text-4xl font-bold text-foreground">
+              {evaluation.score}<span className="text-lg text-muted-foreground font-medium">/100</span>
+            </span>
+            <span className="text-xs text-muted-foreground mt-1">Rubric-weighted match score</span>
+          </div>
+        ) : evaluation.overall_score !== null && evaluation.overall_score !== undefined && (
           <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/30">
             <span className="text-3xl font-bold text-foreground">{evaluation.overall_score}/5</span>
             <span className="text-xs text-muted-foreground mt-1">Overall Score</span>
+          </div>
+        )}
+
+        {/* Summary */}
+        {evaluation.summary && (
+          <p className="text-sm text-foreground/80 leading-relaxed">{evaluation.summary}</p>
+        )}
+
+        {/* Rubric breakdown */}
+        {rubricRows.length > 0 && (
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium flex items-center gap-2">
+              <ClipboardList className="h-4 w-4" />
+              Rubric Breakdown
+            </h4>
+            {rubricRows.map((row) => (
+              <div key={row.key} className="space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span className="text-foreground/80 font-medium">{row.label}</span>
+                  <span className="font-medium">{row.value}/5</span>
+                </div>
+                <Progress value={(row.value / 5) * 100} className="h-1.5" />
+                {row.evidence && <p className="text-xs text-muted-foreground leading-relaxed">{row.evidence}</p>}
+              </div>
+            ))}
           </div>
         )}
 
@@ -236,7 +287,8 @@ export function AIEvaluationCard({ evaluation, className = "" }: AIEvaluationCar
         {/* Evaluation timestamp */}
         {evaluation.evaluated_at && (
           <p className="text-xs text-muted-foreground/70 text-right">
-            Evaluated {new Date(evaluation.evaluated_at).toLocaleDateString()}
+            Evaluated {new Date(evaluation.evaluated_at).toLocaleString()}
+            {evaluation.model_used && ` · ${evaluation.model_used}`}
           </p>
         )}
       </CardContent>

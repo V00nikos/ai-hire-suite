@@ -87,8 +87,8 @@ export function useCandidatesForJob(jobId: string | undefined) {
           phone: app.candidates?.phone,
           currentRole: '',
           experience: experience || '',
-          // Use overall_score if available, fallback to legacy score
-          score: aiEval?.overall_score ?? aiEval?.score ?? null,
+          // 0-100 weighted rubric match score
+          score: aiEval?.score ?? null,
           overallScore: aiEval?.overall_score ?? null,
           resumeScore: aiEval?.resume_score ?? null,
           videoScore: aiEval?.video_score ?? null,

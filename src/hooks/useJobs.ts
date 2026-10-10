@@ -126,10 +126,12 @@ export function useUpdateJobWithForm() {
       jobId,
       job,
       formFields,
+      evaluationRubric,
     }: {
       jobId: string;
       job: Partial<Tables<'jobs'>>;
       formFields: unknown[];
+      evaluationRubric?: unknown;
     }) => {
       // Update job
       const { data: jobData, error: jobError } = await supabase
@@ -164,7 +166,10 @@ export function useUpdateJobWithForm() {
       // Update form version with new fields
       const { error: versionError } = await supabase
         .from('form_versions')
-        .update({ fields: formFields as any })
+        .update({
+          fields: formFields as any,
+          ...(evaluationRubric !== undefined && { evaluation_rubric: evaluationRubric as any }),
+        })
         .eq('id', version.id);
 
       if (versionError) throw versionError;
@@ -223,9 +228,11 @@ export function useCreateJobWithForm() {
     mutationFn: async ({
       job,
       formFields,
+      evaluationRubric,
     }: {
       job: TablesInsert<'jobs'>;
       formFields: unknown[];
+      evaluationRubric?: unknown;
     }) => {
       // Create job
       const { data: jobData, error: jobError } = await supabase
@@ -256,6 +263,7 @@ export function useCreateJobWithForm() {
           form_id: formData.id,
           version_number: 1,
           fields: formFields as any,
+          evaluation_rubric: (evaluationRubric ?? null) as any,
           is_published: job.status === 'active',
           created_by: user?.id,
         });

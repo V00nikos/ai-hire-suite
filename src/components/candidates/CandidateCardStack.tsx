@@ -238,7 +238,7 @@ export function CandidateCardStack({
                           <span className="text-xl md:text-2xl font-bold text-foreground">
                             {currentCandidate.score}
                           </span>
-                          <span className="text-muted-foreground text-sm">/5</span>
+                          <span className="text-muted-foreground text-sm">/100</span>
                         </div>
                       )}
                     </div>
