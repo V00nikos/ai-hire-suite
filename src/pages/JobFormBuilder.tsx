@@ -41,6 +41,8 @@ import { useJobFormFields } from "@/hooks/useJobFormFields";
 import { useFormVersionHistory } from "@/hooks/useFormVersionHistory";
 import { ShareCandidateLinkCard } from "@/components/ShareCandidateLinkCard";
 import { JobBuilderSidebar } from "@/components/form-builder/JobBuilderSidebar";
+import { RubricEditor } from "@/components/form-builder/RubricEditor";
+import { EMPTY_RUBRIC, type EvaluationRubric } from "@/types/form";
 import { InlineFieldEditor } from "@/components/form-builder/InlineFieldEditor";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -180,6 +182,7 @@ export default function JobFormBuilder() {
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [fields, setFields] = useState<FormField[]>(DEFAULT_FIELDS);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
+  const [rubric, setRubric] = useState<EvaluationRubric>(EMPTY_RUBRIC);
   
   // Track if we've hydrated from backend to prevent overwriting local edits
   const isHydratedRef = useRef(false);
@@ -198,9 +201,24 @@ export default function JobFormBuilder() {
   useEffect(() => {
     if (formFieldsData?.fields && formFieldsData.fields.length > 0 && !isHydratedRef.current) {
       setFields(formFieldsData.fields);
+      setRubric({ ...EMPTY_RUBRIC, ...(formFieldsData.rubric ?? {}), criteria: formFieldsData.rubric?.criteria ?? [] });
       isHydratedRef.current = true;
     }
   }, [formFieldsData]);
+
+  // Drop half-filled rows before saving; null means "no rubric" (the AI derives criteria from the JD).
+  const rubricForSave = (): EvaluationRubric | null => {
+    const criteria = rubric.criteria
+      .filter((c) => c.label.trim())
+      .map((c) => ({ ...c, label: c.label.trim(), weight: Math.max(0, Number(c.weight) || 0) }));
+    if (criteria.length === 0) return null;
+    return {
+      ...rubric,
+      criteria,
+      must_haves: (rubric.must_haves ?? []).map((s) => s.trim()).filter(Boolean),
+      disqualifiers: (rubric.disqualifiers ?? []).map((s) => s.trim()).filter(Boolean),
+    };
+  };
 
   // Reset hydration flag when jobId changes (navigating to different job)
   useEffect(() => {
@@ -272,6 +290,7 @@ export default function JobFormBuilder() {
           jobId, 
           job: { title: jobTitle, department, description, requirements },
           formFields: fields,
+          evaluationRubric: rubricForSave(),
         },
         {
           onSuccess: () => {
@@ -290,6 +309,7 @@ export default function JobFormBuilder() {
         {
           job: { title: jobTitle, department, description, requirements, status: "draft" },
           formFields: fields,
+          evaluationRubric: rubricForSave(),
         },
         {
           onSuccess: (data) => {
@@ -316,6 +336,7 @@ export default function JobFormBuilder() {
       {
         job: { title: jobTitle, department, description, requirements, status: "active" },
         formFields: fields,
+        evaluationRubric: rubricForSave(),
       },
       {
         onSuccess: (data) => {
@@ -465,6 +486,7 @@ export default function JobFormBuilder() {
                   onStepChange={setCurrentStep}
                   jobTitle={jobTitle}
                   fieldsCount={fields.length}
+                  criteriaCount={rubric.criteria.filter((c) => c.label.trim()).length}
                 />
               </CardContent>
             </Card>
@@ -603,6 +625,29 @@ export default function JobFormBuilder() {
                     <Plus className="mr-2 h-4 w-4" />
                     Add Field
                   </Button>
+                  <div className="pt-4">
+                    <Button onClick={() => setCurrentStep(3)} className="w-full sm:w-auto">
+                      Continue to Scoring Rubric
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {currentStep === 3 && (
+              <Card className="shadow-card">
+                <CardHeader>
+                  <CardTitle className="text-base font-medium">Scoring Rubric</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Every applicant is scored 0-5 on each criterion; the weights roll those up into the 0-100 match score.
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <RubricEditor
+                    rubric={rubric}
+                    onChange={setRubric}
+                    job={{ title: jobTitle, department, description, requirements }}
+                  />
                 </CardContent>
               </Card>
             )}
@@ -621,6 +666,13 @@ export default function JobFormBuilder() {
                     <p>• Add a compelling job title that stands out</p>
                     <p>• Write a clear description of the role</p>
                     <p>• List specific requirements and qualifications</p>
+                  </>
+                ) : currentStep === 3 ? (
+                  <>
+                    <p>• Start from the AI draft, then adjust the weights</p>
+                    <p>• 4-6 criteria works best; weights should total 100%</p>
+                    <p>• Describe what a 5/5 looks like for each criterion</p>
+                    <p>• Save to apply it to new applicants; existing scores keep the rubric they were scored with</p>
                   </>
                 ) : (
                   <>

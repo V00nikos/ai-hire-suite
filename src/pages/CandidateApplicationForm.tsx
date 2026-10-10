@@ -132,86 +132,46 @@ export default function CandidateApplicationForm() {
     setIsSubmitting(true);
 
     try {
-      // Create or find candidate
-      const { data: existingCandidate } = await supabase
-        .from('candidates')
-        .select('id')
-        .eq('email', email)
-        .single();
-
-      let candidateId: string;
-
-      if (existingCandidate) {
-        candidateId = existingCandidate.id;
-      } else {
-        const { data: newCandidate, error: candidateError } = await supabase
-          .from('candidates')
-          .insert({
-            email,
-            name,
-            phone,
-            source: 'application',
-          })
-          .select('id')
-          .single();
-
-        if (candidateError || !newCandidate) {
-          throw new Error('Failed to create candidate');
-        }
-        candidateId = newCandidate.id;
-      }
-
-      // Create application
-      const { data: application, error: appError } = await supabase
-        .from('applications')
-        .insert({
-          candidate_id: candidateId,
-          job_id: job.id,
-          form_version_id: job.form_version_id,
-          status: 'pending',
-        })
-        .select('id')
-        .single();
-
-      if (appError || !application) {
-        throw new Error('Failed to create application');
-      }
-
-      // Save form responses (skip description_block fields and empty values)
-      // Filter out fields with no response to avoid NOT NULL constraint violation
-      const formResponses = job.form_config
+      // Find-or-create the candidate, create the application and save the form responses in one
+      // SECURITY DEFINER call — anonymous applicants can insert but not read rows back under RLS.
+      // Skip description_block fields and empty values (response_value is NOT NULL).
+      const responses = job.form_config
         .filter(field => field.type !== "description_block")
         .filter(field => {
           const value = formData[field.id];
-          // Only include fields that have actual values
           if (value === undefined || value === null) return false;
           if (typeof value === 'string' && value.trim() === '') return false;
           if (Array.isArray(value) && value.length === 0) return false;
           return true;
         })
         .map(field => ({
-          application_id: application.id,
-          form_version_id: job.form_version_id!,
           field_id: field.id,
           field_label: field.label,
           field_type: field.type,
           response_value: formData[field.id],
         }));
 
-      if (formResponses.length > 0) {
-        const { error: responsesError } = await supabase
-          .from('form_responses')
-          .insert(formResponses);
+      const { data: applicationId, error: submitError } = await (supabase.rpc as any)('submit_application', {
+        p_job_id: job.id,
+        p_form_version_id: job.form_version_id ?? null,
+        p_name: name,
+        p_email: email,
+        p_phone: phone,
+        p_responses: responses,
+      });
 
-        if (responsesError) {
-          console.error('Error saving form responses:', responsesError);
+      if (submitError || !applicationId) {
+        if (submitError?.message?.includes('already_applied')) {
           toast({
-            title: "Warning",
-            description: "Some form data may not have been saved properly.",
+            title: "Already applied",
+            description: "An application with this email already exists for this job.",
             variant: "destructive",
           });
+          return;
         }
+        throw new Error(submitError?.message ?? 'Failed to submit application');
       }
+      const application = { id: applicationId as string };
 
       // Upload files if any
       for (const [fieldId, file] of Object.entries(files)) {

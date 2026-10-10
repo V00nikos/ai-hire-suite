@@ -31,6 +31,7 @@ import {
 import { LaurelWreath } from "@/components/LaurelWreath";
 import { QuickFactsCard } from "@/components/candidates/QuickFactsCard";
 import { AIEvaluationCard } from "@/components/candidates/AIEvaluationCard";
+import { RunEvaluationButton } from "@/components/candidates/RunEvaluationButton";
 import { ResumeEmbed } from "@/components/candidates/ResumeEmbed";
 import { CandidateNotesSection } from "@/components/candidates/CandidateNotesSection";
 import { useToast } from "@/hooks/use-toast";
@@ -381,6 +382,11 @@ export default function CandidateProfile() {
             <QuickFactsCard facts={quickFacts} />
             
             {/* AI Evaluation Card */}
+            {primaryApp && (
+              <div className="flex justify-end">
+                <RunEvaluationButton applicationId={primaryApp.id} hasEvaluation={!!aiEval} />
+              </div>
+            )}
             <AIEvaluationCard evaluation={aiEval} />
 
             {/* No AI data message */}

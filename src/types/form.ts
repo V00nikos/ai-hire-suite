@@ -78,3 +78,25 @@ export const FIELD_TYPES: { type: FormFieldType; label: string; icon: string }[]
   { type: "multiselect", label: "Multi-select", icon: "CheckSquare" },
   { type: "description_block", label: "Description Block", icon: "FileText" },
 ];
+
+export interface RubricCriterion {
+  key: string;
+  label: string;
+  weight: number;
+  description?: string;
+}
+
+// Stored on form_versions.evaluation_rubric; evaluate-application scores every applicant against it.
+export interface EvaluationRubric {
+  scale?: string;
+  criteria: RubricCriterion[];
+  must_haves?: string[];
+  disqualifiers?: string[];
+}
+
+export const EMPTY_RUBRIC: EvaluationRubric = {
+  scale: "0-5 per criterion, weighted to a 0-100 match score",
+  criteria: [],
+  must_haves: [],
+  disqualifiers: [],
+};

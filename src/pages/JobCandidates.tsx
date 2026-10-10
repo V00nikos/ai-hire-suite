@@ -148,7 +148,7 @@ export default function JobCandidates() {
                 disabled={isSyncing}
               >
                 <RefreshCw className={`h-4 w-4 md:mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-                <span className="hidden md:inline">{isSyncing ? 'Syncing...' : 'Sync Evaluations'}</span>
+                <span className="hidden md:inline">{isSyncing ? 'Scoring...' : 'Score Pending'}</span>
               </Button>
               <Link to={`/jobs/${jobId}/review`} className="flex-1 md:flex-none">
                 <Button className="w-full md:w-auto" size="sm">Quick Review</Button>
@@ -248,7 +248,7 @@ export default function JobCandidates() {
                             <h3 className="text-base font-medium text-foreground">{candidate.name}</h3>
                             {candidate.score !== null && candidate.score !== undefined && (
                               <Badge variant="secondary" className="text-sm font-semibold">
-                                {candidate.score}/5
+                                {candidate.score}/100
                               </Badge>
                             )}
                             <Badge variant="outline" className={statusColors[candidate.status || 'pending']}>

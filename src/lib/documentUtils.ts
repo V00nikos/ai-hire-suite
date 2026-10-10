@@ -95,8 +95,8 @@ export interface QuickFact {
 
 const QUICK_FACT_FIELDS = [
   { patterns: ['experience', 'years of experience', 'total experience'], label: 'Experience', type: 'text' as const },
-  { patterns: ['ctc', 'current ctc', 'current salary', 'salary'], label: 'Current CTC', type: 'currency' as const },
   { patterns: ['expected ctc', 'expected salary', 'expected'], label: 'Expected CTC', type: 'currency' as const },
+  { patterns: ['ctc', 'current ctc', 'current salary', 'salary'], label: 'Current CTC', type: 'currency' as const },
   { patterns: ['notice period', 'notice'], label: 'Notice Period', type: 'text' as const },
   { patterns: ['location', 'city', 'current location'], label: 'Location', type: 'text' as const },
   { patterns: ['linkedin', 'linkedin url', 'linkedin profile'], label: 'LinkedIn', type: 'url' as const },

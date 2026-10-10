@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { FormField } from '@/types/form';
+import { EvaluationRubric, FormField } from '@/types/form';
 
 interface JobFormFieldsData {
   formId: string;
@@ -8,6 +8,7 @@ interface JobFormFieldsData {
   versionNumber: number;
   isPublished: boolean;
   fields: FormField[];
+  rubric: EvaluationRubric | null;
 }
 
 export function useJobFormFields(jobId: string | undefined) {
@@ -31,7 +32,7 @@ export function useJobFormFields(jobId: string | undefined) {
       // Get latest form version (regardless of publish status for editing)
       const { data: version, error: versionError } = await supabase
         .from('form_versions')
-        .select('id, fields, is_published, version_number')
+        .select('id, fields, is_published, version_number, evaluation_rubric')
         .eq('form_id', form.id)
         .order('version_number', { ascending: false })
         .limit(1)
@@ -48,6 +49,7 @@ export function useJobFormFields(jobId: string | undefined) {
         versionNumber: version.version_number,
         isPublished: version.is_published ?? false,
         fields: version.fields as unknown as FormField[],
+        rubric: (version.evaluation_rubric as unknown as EvaluationRubric) ?? null,
       };
     },
     enabled: !!jobId,

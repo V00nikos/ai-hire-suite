@@ -5,76 +5,51 @@ import { useToast } from '@/hooks/use-toast';
 
 interface SyncResult {
   success: boolean;
-  message: string;
   synced: number;
-  total?: number;
-  errors?: string[];
+  total: number;
 }
 
+// Scores every application for the job that has no AI evaluation yet (normally the
+// on_application_created trigger does this; this is the manual catch-up).
 export function useSyncEvaluations(jobId?: string) {
   const [isSyncing, setIsSyncing] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const syncEvaluations = async (): Promise<SyncResult | null> => {
+    if (!jobId) return null;
     setIsSyncing(true);
-    
     try {
-      console.log('🔄 Triggering evaluation sync...');
-      
-      const { data, error } = await supabase.functions.invoke('sync-evaluations');
+      const { data, error } = await supabase
+        .from('applications')
+        .select('id, ai_evaluations(id)')
+        .eq('job_id', jobId);
+      if (error) throw error;
 
-      if (error) {
-        console.error('❌ Sync error:', error);
-        toast({
-          title: "Sync Failed",
-          description: error.message || "Could not sync evaluations from personal database",
-          variant: "destructive",
-        });
-        return null;
+      const pending = (data || []).filter((a: any) => !a.ai_evaluations).map((a) => a.id);
+      if (pending.length === 0) {
+        toast({ title: "All candidates are scored", description: "Every application for this job has an AI evaluation." });
+        return { success: true, synced: 0, total: 0 };
       }
 
-      const result = data as SyncResult;
-      console.log('✅ Sync result:', result);
+      toast({ title: `Scoring ${pending.length} candidate${pending.length > 1 ? 's' : ''}…`, description: "Results appear in the list as they land." });
+      const results = await Promise.allSettled(
+        pending.map((id) => supabase.functions.invoke('evaluate-application', { body: { application_id: id } })),
+      );
+      const synced = results.filter((r) => r.status === 'fulfilled' && !r.value.error && !r.value.data?.error).length;
 
-      if (result.success) {
-        // Invalidate queries to refresh UI
-        queryClient.invalidateQueries({ queryKey: ['candidates'] });
-        if (jobId) {
-          queryClient.invalidateQueries({ queryKey: ['candidates', 'job', jobId] });
-        }
-        queryClient.invalidateQueries({ queryKey: ['candidate'] });
-
-        if (result.synced > 0) {
-          toast({
-            title: "Evaluations Synced",
-            description: `Successfully synced ${result.synced} evaluation${result.synced > 1 ? 's' : ''}`,
-          });
-        } else {
-          toast({
-            title: "No New Evaluations",
-            description: "All evaluations are already synced",
-          });
-        }
-
-        if (result.errors && result.errors.length > 0) {
-          console.warn('⚠️ Some evaluations had errors:', result.errors);
-        }
-      } else {
-        toast({
-          title: "Sync Failed",
-          description: result.message || "Could not sync evaluations",
-          variant: "destructive",
-        });
-      }
-
-      return result;
-
-    } catch (err) {
-      console.error('❌ Unexpected sync error:', err);
+      queryClient.invalidateQueries({ queryKey: ['candidates'] });
+      queryClient.invalidateQueries({ queryKey: ['candidate'] });
       toast({
-        title: "Sync Error",
-        description: "An unexpected error occurred while syncing",
+        title: synced === pending.length ? "Scoring complete" : "Scoring finished with errors",
+        description: `${synced} of ${pending.length} candidates scored.`,
+        variant: synced === pending.length ? undefined : "destructive",
+      });
+      return { success: synced === pending.length, synced, total: pending.length };
+    } catch (e) {
+      toast({
+        title: "Scoring failed",
+        description: e instanceof Error ? e.message : "Please try again.",
         variant: "destructive",
       });
       return null;
@@ -83,8 +58,5 @@ export function useSyncEvaluations(jobId?: string) {
     }
   };
 
-  return {
-    syncEvaluations,
-    isSyncing,
-  };
+  return { syncEvaluations, isSyncing };
 }

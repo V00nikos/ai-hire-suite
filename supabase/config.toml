@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.sync-evaluations]
 verify_jwt = false
+
+[functions.evaluate-application]
+verify_jwt = false
+
+[functions.generate-rubric]
+verify_jwt = true

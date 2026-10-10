@@ -1,4 +1,4 @@
-import { Check, FileText, ListChecks } from "lucide-react";
+import { Check, FileText, ListChecks, Scale } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface JobBuilderSidebarProps {
@@ -6,6 +6,7 @@ interface JobBuilderSidebarProps {
   onStepChange: (step: number) => void;
   jobTitle: string;
   fieldsCount: number;
+  criteriaCount: number;
 }
 
 export function JobBuilderSidebar({
@@ -13,6 +14,7 @@ export function JobBuilderSidebar({
   onStepChange,
   jobTitle,
   fieldsCount,
+  criteriaCount,
 }: JobBuilderSidebarProps) {
   const steps = [
     {
@@ -28,6 +30,13 @@ export function JobBuilderSidebar({
       description: "Build your form fields",
       icon: ListChecks,
       isComplete: fieldsCount >= 3,
+    },
+    {
+      id: 3,
+      title: "Scoring Rubric",
+      description: "What the AI scores against",
+      icon: Scale,
+      isComplete: criteriaCount > 0,
     },
   ];
 

@@ -13,6 +13,10 @@ import { z } from 'zod';
 const emailSchema = z.string().email('Please enter a valid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 
+// Optional public demo account (fictional data). Set both env vars to show the one-click button.
+const DEMO_EMAIL = import.meta.env.VITE_DEMO_EMAIL as string | undefined;
+const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD as string | undefined;
+
 export default function Auth() {
   const navigate = useNavigate();
   const { user, loading: authLoading, signIn, signUp } = useAuth();
@@ -69,6 +73,20 @@ export default function Auth() {
     }
   };
 
+  const handleDemoLogin = async () => {
+    if (!DEMO_EMAIL || !DEMO_PASSWORD) return;
+    setLoginEmail(DEMO_EMAIL);
+    setLoginPassword(DEMO_PASSWORD);
+    setIsLoading(true);
+    const { error } = await signIn(DEMO_EMAIL, DEMO_PASSWORD);
+    setIsLoading(false);
+    if (error) {
+      toast({ title: 'Demo login failed', description: error.message, variant: 'destructive' });
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -88,8 +106,16 @@ export default function Auth() {
     }
 
     setIsLoading(true);
-    const { error } = await signUp(signupEmail, signupPassword, signupFullName);
+    const { error, needsConfirmation } = await signUp(signupEmail, signupPassword, signupFullName);
     setIsLoading(false);
+
+    if (needsConfirmation) {
+      toast({
+        title: 'Check your email',
+        description: `We sent a confirmation link to ${signupEmail}. Open it, then log in.`,
+      });
+      return;
+    }
 
     if (error) {
       if (error.message.includes('already registered')) {
@@ -126,8 +152,8 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-card">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-semibold">Welcome to Laurel</CardTitle>
-          <CardDescription>AI-powered recruiting assistant</CardDescription>
+          <CardTitle className="text-2xl font-semibold">Welcome to AI Hire Suite</CardTitle>
+          <CardDescription>Every applicant scored against your rubric</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
@@ -170,6 +196,16 @@ export default function Auth() {
                     'Log In'
                   )}
                 </Button>
+                {DEMO_EMAIL && DEMO_PASSWORD && (
+                  <>
+                    <div className="relative py-1 text-center text-xs text-muted-foreground">
+                      <span className="bg-card px-2">or</span>
+                    </div>
+                    <Button type="button" variant="outline" className="w-full" onClick={handleDemoLogin} disabled={isLoading}>
+                      Continue with the demo account
+                    </Button>
+                  </>
+                )}
               </form>
             </TabsContent>
             
